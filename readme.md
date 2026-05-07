@@ -1,315 +1,236 @@
-# CineSync AI 
+# CineSync AI Backend
 
-Automated multimodal video orchestration backend built using FastAPI.
+Production-grade FastAPI backend for a multimodal video orchestration engine that ingests media, analyzes clips, compiles an AI-driven timeline, and renders social-ready outputs through asynchronous pipelines.
 
-This service acts as the core intelligence layer that transforms raw media assets and a user prompt into a fully edited, platform ready video using AI driven sequencing, visual understanding, and GPU accelerated rendering.
+## Project Structure
 
-This project is based on the CineSync AI architecture and modular service design defined in the project documents :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
-
-
-## Problem Statement
-
-Modern generative AI tools can create short video clips, but there is no end to end system that can take these clips and automatically produce a coherent final video.
-
-Current limitations include
-
-Manual stitching of clips  
-Manual synchronization with music  
-Manual addition of overlays and transitions  
-Manual resizing for different platforms  
-
-This backend solves the orchestration problem by acting as an AI Director.
-
-
-## Solution Overview
-
-The backend provides a complete pipeline that
-
-Accepts raw video clips images and text prompts  
-Analyzes visual content using vision language models  
-Generates structured timeline JSON  
-Executes rendering using GPU accelerated pipelines  
-Outputs a final edited video optimized for social platforms  
-
-The system is designed to run on AMD GPU infrastructure with ROCm acceleration for high throughput video processing :contentReference[oaicite:2]{index=2}
-
-
-## High Level Architecture
-
-The system is divided into four primary layers
-
-Ingestion Layer  
-Cognitive Layer  
-Synthesis Layer  
-Audio Alignment Layer  
-
-### Architecture Diagram
-
-                USER INPUT
-    -----------------------------------
-    Video Clips     Images     Prompt
-    -----------------------------------
-                    |
-                    v
-
-            INGESTION LAYER
-    FastAPI Gateway + Upload Service
-                    |
-                    v
-
-           COGNITIVE LAYER
- ----------------------------------------
- VLM (Vision Understanding)
- Keyframe Extraction
- Scene Segmentation
- Clip Tagging
-
- LLM (Narrative Engine)
- Prompt Interpretation
- Semantic Matching
- Timeline JSON Generation
- ----------------------------------------
-                    |
-                    v
-
-           SYNTHESIS LAYER
- ----------------------------------------
- Timeline Executor
- Clip Trimming
- Transitions
- Overlays
- GPU Encoding (FFmpeg + ROCm)
- ----------------------------------------
-                    |
-                    v
-
-        AUDIO ALIGNMENT LAYER
- ----------------------------------------
- Beat Detection
- Tempo Analysis
- Transition Sync
- ----------------------------------------
-                    |
-                    v
-
-               FINAL OUTPUT
-      Platform Ready Video + Timeline JSON
-
-
-The architecture diagram aligns with the system design described in the project document where ingestion feeds into multimodal cognition followed by GPU accelerated synthesis and audio synchronization :contentReference[oaicite:3]{index=3}
-
-
-## Core System Modules
-
-The backend is structured as a modular monolith that can evolve into microservices.
-
-### 1. Asset Ingestion and Normalization Layer
-
-Handles all incoming user assets
-
-Upload service  
-Format normalization for fps codec resolution  
-Metadata extraction including duration bitrate aspect ratio  
-
-This ensures consistent processing across all pipelines :contentReference[oaicite:4]{index=4}
-
-
-### 2. Visual Intelligence Engine
-
-Responsible for understanding video content
-
-Keyframe sampler  
-Scene segmentation  
-Vision language model inference  
-Semantic tagging  
-Embedding generation  
-
-Example output
-``` {
-"clip_id": "123",
-"tags": ["coffee", "steam", "slow motion"],
-"mood": "warm",
-"motion": "slow",
-"energy": "low"
-}```
-
-
-This forms the foundation for narrative planning :contentReference[oaicite:5]{index=5}
-
-
-### 3. Narrative Compiler
-
-Core intelligence of the system
-
-Prompt interpreter  
-Semantic matcher between prompt and clips  
-Sequence planner  
-Pacing engine  
-Timeline generator  
-
-Example output
-``` 
-[
-{"clip_id": "2", "start": 0, "end": 2.5, "transition": "cut"},
-{"clip_id": "5", "start": 1, "end": 4, "transition": "beat_sync"}
-]
+```text
+.
+├── app
+│   ├── api
+│   │   ├── dependencies.py
+│   │   ├── router.py
+│   │   └── v1
+│   │       ├── endpoints
+│   │       │   ├── health.py
+│   │       │   ├── jobs.py
+│   │       │   └── uploads.py
+│   │       └── router.py
+│   ├── config
+│   │   ├── settings.py
+│   │   └── validation.py
+│   ├── core
+│   │   ├── container.py
+│   │   ├── exceptions.py
+│   │   └── lifespan.py
+│   ├── logging
+│   │   └── setup.py
+│   ├── middleware
+│   │   ├── body_limit.py
+│   │   └── request_context.py
+│   ├── models
+│   │   └── domain.py
+│   ├── pipeline
+│   │   └── orchestrator.py
+│   ├── repositories
+│   │   └── job_repository.py
+│   ├── schemas
+│   │   ├── common.py
+│   │   ├── health.py
+│   │   ├── jobs.py
+│   │   └── uploads.py
+│   ├── services
+│   │   ├── ai_service.py
+│   │   ├── audio_analysis_service.py
+│   │   ├── ffmpeg_service.py
+│   │   ├── health_service.py
+│   │   ├── render_service.py
+│   │   ├── timeline_service.py
+│   │   └── video_analysis_service.py
+│   ├── storage
+│   │   └── local.py
+│   ├── utils
+│   │   ├── context.py
+│   │   ├── security.py
+│   │   └── timers.py
+│   ├── workers
+│   │   └── job_manager.py
+│   └── main.py
+├── tests
+│   ├── conftest.py
+│   ├── test_health.py
+│   ├── test_jobs.py
+│   └── test_uploads.py
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+├── pytest.ini
+└── requirements.txt
 ```
 
-This represents the Edit Decision List used for rendering :contentReference[oaicite:6]{index=6}
+## Architecture
 
+The backend is split into production-oriented layers:
 
-### 4. Temporal Intelligence Engine
+- `api/`: versioned HTTP routes and dependency injection.
+- `core/`: application lifecycle, exception contracts, and container wiring.
+- `config/`: typed environment settings and startup validation.
+- `middleware/`: request tracing, request sizing, correlation IDs.
+- `services/`: FFmpeg, OpenCV, librosa, AI scoring, timeline compilation, rendering, health.
+- `pipeline/`: orchestration across ingestion, analysis, cognition, timeline, and rendering.
+- `repositories/`: async-safe in-memory job state repository.
+- `storage/`: isolated local storage workspaces for uploads, temp files, outputs, and manifests.
+- `workers/`: lightweight async job manager with queueing, cancellation, progress, and timeout handling.
 
-Aligns video with audio
+## Features
 
-Beat detection using Wav2Vec or librosa  
-Tempo analysis  
-Transition alignment  
-Energy curve mapping  
+- Fully async FastAPI service with structured JSON logging via `structlog`.
+- Request correlation and job correlation across logs and responses.
+- Global exception handling with safe production responses.
+- Typed settings using `pydantic-settings` and fail-fast environment validation.
+- Upload validation for size, MIME type, extension, and path safety.
+- In-memory async job system with status polling and cancellation.
+- OpenCV-based clip analysis and composition.
+- librosa-based beat detection and timeline alignment.
+- FFmpeg/ffprobe async wrapper with retries, timeouts, stderr capture, and metadata extraction.
+- Deterministic timeline compiler with optional local transformer-based semantic scoring.
 
-Transforms music into structured timing patterns such as
+## Environment Setup
 
-low to build to drop to high to outro :contentReference[oaicite:7]{index=7}
+1. Copy the example env file:
 
+```bash
+cp .env.example .env
+```
 
-### 5. Rendering and Composition Engine
+2. Adjust values for your environment:
 
-Executes the final video generation
+- `DATABASE_URL` for your hosted Postgres instance.
+- `AI_SERVER_URL` and `MEDIA_SERVER_URL` for hosted AI or media workers.
+- `R2_*` keys for Cloudflare R2.
+- Storage and logging paths if you want different mount points.
 
-Timeline executor  
-Clip trimmer  
-Transition engine  
-Overlay renderer  
-Filter engine  
-GPU encoding using FFmpeg with ROCm  
+## Local Development
 
-This layer performs all heavy compute operations :contentReference[oaicite:8]{index=8}
+Install dependencies:
 
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-### 6. Format Adaptation Engine
+Run the API:
 
-Optimizes output for platforms
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-Aspect ratio transformation  
-Smart cropping with object tracking  
-Platform presets for reels shorts and other formats :contentReference[oaicite:9]{index=9}
+Run tests:
 
+```bash
+pytest
+```
 
-### 7. Orchestration and Job System
+## Docker Startup
 
-Manages distributed processing
+Bring the stack up:
 
-Job queue using Redis or Kafka  
-Pipeline orchestrator  
-GPU scheduler  
-Batch processor :contentReference[oaicite:10]{index=10}
+```bash
+cp .env.example .env
+docker compose up --build
+```
 
+API docs are then available at:
 
-### 8. Storage and Asset Management
+- `http://localhost:8000/docs`
+- `http://localhost:8000/redoc`
 
-Handles persistence
+## API Endpoints
 
-Object storage compatible with S3  
-Asset indexing database  
-Caching layer :contentReference[oaicite:11]{index=11}
+- `GET /api/v1/health`
+- `POST /api/v1/uploads`
+- `POST /api/v1/jobs/create`
+- `GET /api/v1/jobs/{job_id}`
+- `GET /api/v1/jobs/{job_id}/status`
+- `GET /api/v1/jobs/{job_id}/output`
+- `DELETE /api/v1/jobs/{job_id}`
 
+## Example Requests
 
-### 9. API and SaaS Layer
+Upload media:
 
-Exposes functionality
+```bash
+curl -X POST "http://localhost:8000/api/v1/uploads" \
+  -F "files=@./sample-assets/clip.mp4" \
+  -F "files=@./sample-assets/cover.png"
+```
 
-User project management  
-Template system  
-Render trigger APIs  
-Webhook and status tracking :contentReference[oaicite:12]{index=12}
+Create a job:
 
+```bash
+curl -X POST "http://localhost:8000/api/v1/jobs/create" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Create a fast 15 second launch teaser with bold text overlays",
+    "upload_ids": ["UPLOAD_ID_1", "UPLOAD_ID_2"],
+    "audio_upload_id": null
+  }'
+```
 
-## Backend Project Structure
-backend/
-│
-├── app/
-│ ├── api/
-│ ├── core/
-│ ├── models/
-│ ├── services/
-│ ├── pipelines/
-│ ├── workers/
-│ ├── utils/
-│ ├── main.py
-│
-├── tests/
-├── scripts/
-├── requirements.txt
-├── .env
-├── Dockerfile
-└── README.md
+Check status:
 
+```bash
+curl "http://localhost:8000/api/v1/jobs/JOB_ID/status"
+```
 
+Fetch output metadata:
 
-## Setup Instructions
+```bash
+curl "http://localhost:8000/api/v1/jobs/JOB_ID/output"
+```
 
-### Clone Repository
+Download output:
 
-### Create Virtual Environment
+```bash
+curl -L "http://localhost:8000/api/v1/jobs/JOB_ID/output?download=true" --output final.mp4
+```
 
-### Install Dependencies
+## Logging
 
-### Configure Environment
+Application logs are written to:
 
-Create a .env file
+- `logs/app.log`
+- `logs/errors.log`
 
+Each request and job is tagged with correlation metadata:
 
+- `request_id`
+- `job_id`
+- elapsed stage timings
 
+## Storage Layout
 
-## Key Engineering Concepts
+Shared uploads live under:
 
-Clip scoring system
+```text
+storage/shared/uploads/{upload_id}/
+```
 
-score equals relevance plus energy match plus visual quality minus diversity penalty  
+Each job gets an isolated workspace:
 
-Pacing intelligence
+```text
+storage/jobs/{job_id}/
+├── uploads/
+├── temp/
+├── outputs/
+└── logs/
+```
 
-Fast cuts for high energy  
-Longer shots for storytelling  
+## Troubleshooting
 
-Transition logic
-
-Match motion direction  
-Match color tone  
-Match semantic meaning  
-
-Memory optimization
-
-Keep video buffers in GPU memory  
-Avoid disk IO bottlenecks  
-Batch processing for throughput  
-
-These are critical system components that directly impact output quality and performance :contentReference[oaicite:13]{index=13}
-
-
-## Deployment Considerations
-
-Use AMD GPU instances with ROCm  
-Run inference using vLLM for low latency  
-Use FFmpeg with hardware acceleration  
-Store assets in S3 compatible storage  
-Use Redis for job queues  
-
-The system is designed to scale horizontally with GPU aware scheduling :contentReference[oaicite:14]{index=14}
-
-
-## Future Enhancements
-
-Streaming video generation  
-Real time editing previews  
-Advanced personalization  
-Multi user collaboration  
-Fine tuned domain specific models  
-
-
-## License
-
-MIT License
-
-
-## Author
+- If `/health` shows FFmpeg as unavailable, verify `FFMPEG_BINARY` and `FFPROBE_BINARY`.
+- If uploads fail with `unsupported_mime_type`, update `ALLOWED_MIME_TYPES` and `ALLOWED_EXTENSIONS`.
+- If model downloads are restricted, set `ENABLE_LOCAL_AI_FALLBACK=false` to skip transformer loading.
+- If OpenCV cannot encode MP4 in your host environment, run through Docker where FFmpeg and the required system libraries are installed.
