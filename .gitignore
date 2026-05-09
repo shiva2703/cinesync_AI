@@ -1,0 +1,33 @@
+# Environment and secrets
+.env
+
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.so
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local editor metadata
+.vscode/
+.idea/
+
+# Local Codex/session metadata
+.agents/
+.codex/
+
+# Runtime output and generated assets
+logs/
+storage/
+models-cache/
+sample-assets/
+final.mp4
+
+# OS files
+.DS_Store
+Thumbs.db

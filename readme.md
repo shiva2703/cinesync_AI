@@ -1,6 +1,6 @@
 # CineSync AI Backend
 
-Production-grade FastAPI backend for a multimodal video orchestration engine that ingests media, analyzes clips, compiles an AI-driven timeline, and renders social-ready outputs through asynchronous pipelines.
+Production-grade FastAPI backend for a multimodal video orchestration engine that ingests media, analyzes clips, compiles an AI-driven timeline, renders social-ready outputs, and persists assets through either local storage or Cloudflare R2.
 
 ## Project Structure
 
@@ -48,7 +48,11 @@ Production-grade FastAPI backend for a multimodal video orchestration engine tha
 │   │   ├── timeline_service.py
 │   │   └── video_analysis_service.py
 │   ├── storage
-│   │   └── local.py
+│   │   ├── base.py
+│   │   ├── factory.py
+│   │   ├── keys.py
+│   │   ├── local.py
+│   │   └── r2.py
 │   ├── utils
 │   │   ├── context.py
 │   │   ├── security.py
@@ -94,6 +98,15 @@ The backend is split into production-oriented layers:
 - librosa-based beat detection and timeline alignment.
 - FFmpeg/ffprobe async wrapper with retries, timeouts, stderr capture, and metadata extraction.
 - Deterministic timeline compiler with optional local transformer-based semantic scoring.
+- Dual storage backends:
+  - `local` for filesystem-backed development
+  - `r2` for Cloudflare R2 persisted uploads and generated outputs
+- Deterministic persisted object keys:
+  - uploads: `uploads/{scope}/{asset_type}/{base_name}__src__{asset_id}{ext}`
+  - outputs: `outputs/{job_id}/{base_name}__final__{output_id}{ext}`
+  - timeline: `outputs/{job_id}/{base_name}__timeline__{output_id}.json`
+  - metadata: `outputs/{job_id}/{base_name}__meta__{output_id}.json`
+  - preview: `outputs/{job_id}/{base_name}__preview__{output_id}.jpg`
 
 ## Environment Setup
 
@@ -107,8 +120,19 @@ cp .env.example .env
 
 - `DATABASE_URL` for your hosted Postgres instance.
 - `AI_SERVER_URL` and `MEDIA_SERVER_URL` for hosted AI or media workers.
-- `R2_*` keys for Cloudflare R2.
+- `STORAGE_BACKEND=local` for local-only persistence, or `STORAGE_BACKEND=r2` for Cloudflare R2.
+- `R2_*` keys for Cloudflare R2 when using the R2 backend.
 - Storage and logging paths if you want different mount points.
+
+For Cloudflare R2, set:
+
+- `STORAGE_BACKEND=r2`
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_NAME`
+- `R2_ENDPOINT_URL`
+- `R2_PUBLIC_BASE_URL` if you want public asset URLs in API responses
 
 ## Local Development
 
@@ -191,6 +215,14 @@ Fetch output metadata:
 curl "http://localhost:8000/api/v1/jobs/JOB_ID/output"
 ```
 
+When using R2, this response includes:
+
+- `output_object_key`
+- `output_public_url`
+- `timeline_object_key`
+- `metadata_object_key`
+- preview keys/URLs when present
+
 Download output:
 
 ```bash
@@ -228,9 +260,21 @@ storage/jobs/{job_id}/
 └── logs/
 ```
 
+When `STORAGE_BACKEND=r2`, persisted remote object keys follow:
+
+```text
+uploads/shared/image/my_ad_creative__src__abc123.png
+uploads/shared/video/my_ad_clip__src__def456.mp4
+outputs/job789/my_ad_clip__final__ghi999.mp4
+outputs/job789/my_ad_clip__timeline__ghi999.json
+outputs/job789/my_ad_clip__meta__ghi999.json
+outputs/job789/my_ad_clip__preview__ghi999.jpg
+```
+
 ## Troubleshooting
 
 - If `/health` shows FFmpeg as unavailable, verify `FFMPEG_BINARY` and `FFPROBE_BINARY`.
+- If `/health` shows storage connectivity issues in R2 mode, verify `R2_BUCKET_NAME`, `R2_ENDPOINT_URL`, and access keys.
 - If uploads fail with `unsupported_mime_type`, update `ALLOWED_MIME_TYPES` and `ALLOWED_EXTENSIONS`.
 - If model downloads are restricted, set `ENABLE_LOCAL_AI_FALLBACK=false` to skip transformer loading.
 - If OpenCV cannot encode MP4 in your host environment, run through Docker where FFmpeg and the required system libraries are installed.
